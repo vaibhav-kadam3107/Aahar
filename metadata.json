@@ -1,0 +1,6 @@
+{
+  "name": "Aahar",
+  "description": "A photo-based food and macro tracking app for gym-goers who want to hit daily targets without the friction of manual logging.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
