@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,6 +71,10 @@ fun DashboardScreen(
 
     val todayMeals = remember(mealLogs) {
         mealLogs.filter { it.timestamp >= todayStart }
+    }
+
+    val todayMealsPreview = remember(todayMeals) {
+        todayMeals.sortedByDescending { it.timestamp }.take(4)
     }
 
     val totalCalories = todayMeals.sumOf { it.totalCalories }
@@ -258,9 +263,6 @@ fun DashboardScreen(
 
             item {
                 WeeklySnapshotStrip(
-                    dates = dates,
-                    dailyTotals = dailyTotals,
-                    dailyGoalCalories = dailyGoals.calories,
                     weeklyAvg = weeklyAvg,
                     streakCount = streakCount
                 )
@@ -293,12 +295,12 @@ fun DashboardScreen(
                 }
             }
 
-            if (todayMeals.isEmpty()) {
+            if (todayMealsPreview.isEmpty()) {
                 item {
                     EmptyMealsPlaceholder(onNavigateToCapture)
                 }
             } else {
-                items(todayMeals) { meal ->
+                items(todayMealsPreview) { meal ->
                     MealItemRow(
                         meal = meal,
                         onDelete = { viewModel.deleteMealLog(meal) },
@@ -571,108 +573,37 @@ fun SecondaryNutrientRow(
 
 @Composable
 fun WeeklySnapshotStrip(
-    dates: List<Long>,
-    dailyTotals: List<Pair<Long, Int>>,
-    dailyGoalCalories: Int,
     weeklyAvg: Int,
     streakCount: Int
 ) {
-    val sdfCompare = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-    val todayStr = sdfCompare.format(Date())
-    val dayOfWeekFormat = SimpleDateFormat("EEEEE", Locale.getDefault()) // Single letter: M, T, W...
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
         border = BorderStroke(1.dp, LightMuted.copy(alpha = 0.05f)),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Weekly Activity",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = WarmWhite
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Weekly avg: $weeklyAvg kcal/day",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = LightMuted
-                    )
-                    if (streakCount > 0) {
-                        Text(
-                            text = "•  $streakCount-day streak",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                dailyTotals.forEach { (dateMillis, totalCal) ->
-                    val dateStr = sdfCompare.format(Date(dateMillis))
-                    val isToday = dateStr == todayStr
-                    val dayLetter = dayOfWeekFormat.format(Date(dateMillis))
-
-                    val goal = if (dailyGoalCalories > 0) dailyGoalCalories else 2200
-                    val fraction = (totalCal.toFloat() / goal).coerceIn(0f, 1.2f)
-
-                    // Vertical bar height scaled to max 24.dp for compact stripe
-                    val barHeight = (4.dp + (24.dp * (fraction / 1.2f)))
-
-                    val barColor = when {
-                        isToday -> MaterialTheme.colorScheme.primary
-                        fraction >= 0.8f -> MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                        fraction > 0f -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                        else -> LightMuted.copy(alpha = 0.15f)
-                    }
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(vertical = 2.dp, horizontal = 4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(8.dp)
-                                .height(barHeight)
-                                .clip(CircleShape)
-                                .background(barColor)
-                        )
-
-                        Text(
-                            text = dayLetter,
-                            fontSize = 10.sp,
-                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isToday) MaterialTheme.colorScheme.primary else DarkMuted
-                        )
-                    }
-                }
-            }
+            Icon(
+                imageVector = Icons.Default.TrendingUp,
+                contentDescription = "Weekly Trends",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            val streakText = if (streakCount > 0) " · $streakCount-day streak" else ""
+            Text(
+                text = "Weekly avg: $weeklyAvg kcal/day$streakText",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = WarmWhite,
+                letterSpacing = 0.2.sp
+            )
         }
     }
 }

@@ -106,6 +106,15 @@ fun DiaryScreen(
         }
     }
 
+    val proteinTotals = remember(mealLogs, dates) {
+        dates.map { dateMillis ->
+            val dateStr = sdfCompare.format(Date(dateMillis))
+            val totalProt = mealLogs.filter { sdfCompare.format(Date(it.timestamp)) == dateStr }
+                .sumOf { it.totalProtein }
+            dateMillis to totalProt
+        }
+    }
+
     // 7-day average calculation
     val weeklyAvg = remember(dailyTotals) {
         if (dailyTotals.isEmpty()) 0 else (dailyTotals.sumOf { it.second } / dailyTotals.size)
@@ -285,14 +294,18 @@ fun DiaryScreen(
                 }
 
                 item {
+                    WeeklyProteinTrendsSection(
+                        dates = dates,
+                        proteinTotals = proteinTotals,
+                        goalProtein = dailyGoals.protein
+                    )
+                }
+
+                item {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    // 3. MEAL LIST
+                // 3. MEAL LIST
                     if (mealsForSelectedDay.isEmpty()) {
                         item {
                             Box(
@@ -410,6 +423,131 @@ fun DiaryScreen(
         )
     }
 }
+
+@Composable
+fun WeeklyProteinTrendsSection(
+    dates: List<Long>,
+    proteinTotals: List<Pair<Long, Int>>,
+    goalProtein: Int
+) {
+    val sdfCompare = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+    val todayStr = sdfCompare.format(Date())
+    val dayOfWeekFormat = SimpleDateFormat("EEEEE", Locale.getDefault()) // Single letter: M, T, W...
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("weekly_protein_trends_section"),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        border = BorderStroke(1.dp, LightMuted.copy(alpha = 0.08f)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "WEEKLY PROTEIN TRENDS",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp,
+                        color = LightMuted
+                    )
+                    Text(
+                        text = "Track consistency vs ${goalProtein}g goal",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = DarkMuted
+                    )
+                }
+                
+                // Consistency badge (number of days meeting target)
+                val daysMet = proteinTotals.count { it.second >= goalProtein }
+                Surface(
+                    color = if (daysMet >= 4) ProteinProgress.copy(alpha = 0.15f) else DarkSurfaceHigh,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, if (daysMet >= 4) ProteinProgress.copy(alpha = 0.3f) else LightMuted.copy(alpha = 0.05f))
+                ) {
+                    Text(
+                        text = "$daysMet/7 DAYS MET",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (daysMet >= 4) ProteinProgress else LightMuted,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
+            
+            HorizontalDivider(color = LightMuted.copy(alpha = 0.08f), thickness = 1.dp)
+
+            // Draw Bars Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(130.dp)
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                proteinTotals.forEach { (dateMillis, totalProtein) ->
+                    val dateStr = sdfCompare.format(Date(dateMillis))
+                    val isToday = dateStr == todayStr
+                    val dayLetter = dayOfWeekFormat.format(Date(dateMillis))
+
+                    val fraction = if (goalProtein > 0) (totalProtein.toFloat() / goalProtein).coerceIn(0f, 1.3f) else 0f
+                    val barColor = if (totalProtein >= goalProtein) {
+                        ProteinProgress
+                    } else if (totalProtein > 0) {
+                        ProteinProgress.copy(alpha = 0.4f)
+                    } else {
+                        LightMuted.copy(alpha = 0.15f)
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        // Display protein quantity above bar
+                        Text(
+                            text = "${totalProtein}g",
+                            fontSize = 10.sp,
+                            fontWeight = if (totalProtein >= goalProtein) FontWeight.Bold else FontWeight.Normal,
+                            color = if (totalProtein >= goalProtein) ProteinProgress else LightMuted
+                        )
+
+                        // Vertical bar
+                        Box(
+                            modifier = Modifier
+                                .width(16.dp)
+                                .height((8.dp + (70.dp * (fraction / 1.3f))))
+                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 2.dp, bottomEnd = 2.dp))
+                                .background(barColor)
+                        )
+
+                        // Day Letter label
+                        Text(
+                            text = dayLetter,
+                            fontSize = 11.sp,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isToday) MaterialTheme.colorScheme.primary else DarkMuted
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun DiaryDayReceiptHeader(

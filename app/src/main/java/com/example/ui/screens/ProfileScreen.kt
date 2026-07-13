@@ -28,6 +28,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
+import java.io.File
+import java.io.FileOutputStream
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -41,6 +45,25 @@ import com.example.ui.viewmodel.AaharViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+fun saveUriToInternalStorage(context: Context, uri: Uri): Uri? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        context.filesDir.listFiles { _, name -> name.startsWith("profile_photo_") }?.forEach { 
+            it.delete()
+        }
+        val file = File(context.filesDir, "profile_photo_${System.currentTimeMillis()}.jpg")
+        FileOutputStream(file).use { outputStream ->
+            inputStream.use { input ->
+                input.copyTo(outputStream)
+            }
+        }
+        Uri.fromFile(file)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -51,13 +74,19 @@ fun ProfileScreen(
     val mealLogs by viewModel.mealLogs.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
 
     // Profile Photo Picker Launcher
     val profilePhotoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            viewModel.saveGoals(dailyGoals.copy(profilePhotoUri = uri.toString()))
+            val savedUri = saveUriToInternalStorage(context, uri)
+            if (savedUri != null) {
+                viewModel.saveGoals(dailyGoals.copy(profilePhotoUri = savedUri.toString()))
+            } else {
+                viewModel.saveGoals(dailyGoals.copy(profilePhotoUri = uri.toString()))
+            }
         }
     }
 

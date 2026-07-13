@@ -160,7 +160,8 @@ fun CaptureScreen(
                 is AnalysisState.Error -> {
                     AnalysisErrorView(
                         errorMessage = state.message,
-                        onRetry = { viewModel.setActivePhoto(null) }
+                        onRetry = { viewModel.setActivePhoto(null) },
+                        onRetryAnalysis = { viewModel.retryAnalysis() }
                     )
                 }
                 else -> {
@@ -515,7 +516,11 @@ fun AnalysisLoadingView() {
 }
 
 @Composable
-fun AnalysisErrorView(errorMessage: String, onRetry: () -> Unit) {
+fun AnalysisErrorView(
+    errorMessage: String,
+    onRetry: () -> Unit,
+    onRetryAnalysis: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -560,11 +565,28 @@ fun AnalysisErrorView(errorMessage: String, onRetry: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = onRetry,
+            onClick = onRetryAnalysis,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            modifier = Modifier.testTag("error_retry_btn")
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
+                .testTag("retry_analysis_btn")
         ) {
-            Text("Try Another Photo", color = DarkBackground, fontWeight = FontWeight.Bold)
+            Text("Retry Analysis", color = DarkBackground, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = onRetry,
+            border = BorderStroke(1.dp, LightMuted.copy(alpha = 0.3f)),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = WarmWhite),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
+                .testTag("error_retry_btn")
+        ) {
+            Text("Try Another Photo", fontWeight = FontWeight.Medium)
         }
     }
 }

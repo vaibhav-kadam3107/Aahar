@@ -125,6 +125,18 @@ class AaharViewModel(private val repository: MealRepository) : ViewModel() {
     }
 
     /**
+     * Retry analysis of the current active photo
+     */
+    fun retryAnalysis() {
+        val bitmap = _activePhoto.value
+        if (bitmap != null) {
+            startAnalysis(bitmap)
+        } else {
+            _analysisState.value = AnalysisState.Error("No photo available to retry analysis.")
+        }
+    }
+
+    /**
      * Transition manual mode (when "search instead" fallback is triggered)
      */
     fun setManualModeWithItems(items: List<FoodItem>) {
