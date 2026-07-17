@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.data.api.InsForgeClient
 import com.example.ui.screens.*
 import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.MyApplicationTheme
@@ -22,6 +23,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Initialize persistent secure session store on app boot
+        InsForgeClient.initialize(applicationContext)
 
         // Create the database-aware shared ViewModel
         val factory = ViewModelFactory(applicationContext)
@@ -43,11 +47,25 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AaharAppNavigation(viewModel: AaharViewModel) {
     val navController = rememberNavController()
+    
+    // Choose start destination based on secure authentication state
+    val startDest = if (InsForgeClient.isLoggedIn()) "home" else "auth"
 
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = startDest
     ) {
+        composable("auth") {
+            AuthScreen(
+                viewModel = viewModel,
+                onAuthSuccess = {
+                    navController.navigate("home") {
+                        popUpTo("auth") { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable("home") {
             DashboardScreen(
                 viewModel = viewModel,
@@ -61,7 +79,12 @@ fun AaharAppNavigation(viewModel: AaharViewModel) {
         composable("profile") {
             ProfileScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAuth = {
+                    navController.navigate("auth") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 

@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.model.DailyGoals
+import com.example.data.api.InsForgeClient
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.AaharViewModel
 import kotlinx.coroutines.delay
@@ -68,7 +69,8 @@ fun saveUriToInternalStorage(context: Context, uri: Uri): Uri? {
 @Composable
 fun ProfileScreen(
     viewModel: AaharViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToAuth: () -> Unit
 ) {
     val dailyGoals by viewModel.dailyGoals.collectAsState()
     val mealLogs by viewModel.mealLogs.collectAsState()
@@ -164,6 +166,21 @@ fun ProfileScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = LightMuted
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            InsForgeClient.logout(context)
+                            onNavigateToAuth()
+                        },
+                        modifier = Modifier.testTag("logout_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = "Log Out",
+                            tint = Color(0xFFEF5350)
                         )
                     }
                 },

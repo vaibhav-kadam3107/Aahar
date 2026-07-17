@@ -96,7 +96,7 @@ class AaharViewModel(private val repository: MealRepository) : ViewModel() {
     }
 
     /**
-     * Start Gemini photo analysis
+     * Start Gemini photo analysis via secure InsForge server-side Edge Function
      */
     fun startAnalysis(bitmap: Bitmap) {
         _activePhoto.value = bitmap
@@ -106,7 +106,10 @@ class AaharViewModel(private val repository: MealRepository) : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val results = repository.analyzePhoto(bitmap)
+                val uniqueMealId = java.util.UUID.randomUUID().toString()
+                val idempotencyKey = "idemp_$uniqueMealId"
+                
+                val results = repository.analyzePhoto(bitmap, uniqueMealId, idempotencyKey)
                 _identifiedItems.value = results
                 _analysisState.value = AnalysisState.Success(results)
                 
@@ -325,7 +328,7 @@ class AaharViewModel(private val repository: MealRepository) : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val coachResponse = com.example.data.api.GeminiClient.getCoachResponse(updatedMessages, systemInstruction)
+                val coachResponse = com.example.data.api.InsForgeClient.getCoachResponse(updatedMessages, systemInstruction)
                 val coachMsg = com.example.data.model.ChatMessage(
                     id = java.util.UUID.randomUUID().toString(),
                     sender = "coach",
@@ -339,7 +342,7 @@ class AaharViewModel(private val repository: MealRepository) : ViewModel() {
                 val errorMsg = com.example.data.model.ChatMessage(
                     id = java.util.UUID.randomUUID().toString(),
                     sender = "coach",
-                    text = "I'm having trouble connecting to my servers right now (${e.localizedMessage ?: "Unknown error"}). Please ensure your API Key is configured in AI Studio and try again.",
+                    text = "I'm having trouble connecting to my servers right now (${e.localizedMessage ?: "Unknown error"}). Please check your internet connection and try again.",
                     timestamp = System.currentTimeMillis()
                 )
                 val finalMessages = _chatMessages.value + errorMsg
